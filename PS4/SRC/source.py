@@ -1,4 +1,6 @@
 import copy
+from os import listdir
+from os.path import isfile, join
 from typing import List, Set
 
 
@@ -34,12 +36,19 @@ class CLAUSE:
         clauses = []
         for literal in self.data:
             clauses.append(NEGATIVE(literal))
-        result = CLAUSE('')
-        result.data = set(clauses)
+        result = set([CLAUSE(clause) for clause in clauses])
         return result
 
     def IS_EMPTY(self):
         return len(self.data) == 0
+
+    def IS_MEANING_LESS(self):
+        temp = list(copy.deepcopy(self.data))
+        for i in range(len(temp)):
+            for j in range(i + 1, len(temp)):
+                if NEGATIVE(temp[i]) == temp[j]:
+                    return True
+        return False
 
     def __repr__(self) -> str:
         if len(self.data) == 0:
@@ -77,7 +86,10 @@ def PL_RESOLVE(a: CLAUSE, b: CLAUSE) -> set:
             data.remove('removed')
         result = CLAUSE('')
         result.data = set(data)
-        return set([result])
+        if result.IS_MEANING_LESS():
+            return set([])
+        else:
+            return set([result])
     else:
         return set([])
 
@@ -94,10 +106,10 @@ def PL_RESOLUTION(KB: Set[CLAUSE], alpha: CLAUSE, debug_mode: bool = False):
     outputs = []
 
     clauses = copy.deepcopy(KB)
-    clauses.add(alpha.NOT())
+    clauses = clauses.union(alpha.NOT())
 
     if debug_mode:
-        print('initial clauses =', clauses)
+        print('\ninitial clauses =', clauses)
 
     new = set()
 
@@ -105,24 +117,20 @@ def PL_RESOLUTION(KB: Set[CLAUSE], alpha: CLAUSE, debug_mode: bool = False):
     while (True):
         temp = list(clauses)
 
-        newClauses = []
-
         loop = loop + 1
         if debug_mode:
-            print('loop #', loop)
+            print('\nloop #', loop)
+            print('current clauses: ' + str(temp))
         for i in range(len(temp)):
             for j in range(i + 1, len(temp)):
-                if RESOLVABLE(temp[i], temp[j]):
-                    resolvents = PL_RESOLVE(temp[i], temp[j])
-                    if debug_mode:
-                        print(
-                            'resolve (' + str(temp[i]) + ') and (' + str(temp[j]) + ') = ' + str(resolvents))
-                    if not resolvents.issubset(clauses):
-                        newClauses = newClauses + list(resolvents)
-                    new = new.union(resolvents)
+                resolvents = PL_RESOLVE(temp[i], temp[j])
+                if debug_mode and len(resolvents) > 0:
+                    print('resolve (' + str(temp[i]) + ') and (' + str(temp[j]) + ') = ' + str(resolvents))
+                new = new.union(resolvents)
 
-        outputs.append(len(set(newClauses)))
-        outputs = outputs + list(set(newClauses))
+        newClauses = new - clauses
+        outputs.append(len(newClauses))
+        outputs = outputs + list(newClauses)
 
         if CONTAINS_EMPTY_CLAUSE(new):
             if debug_mode:
@@ -147,7 +155,8 @@ def READ_INPUT(inputFilePath: str):
             lines = inputFile.readlines()
             alpha = CLAUSE(lines[0].replace('\n', ''))
             numOfClauses = int(lines[1].replace('\n', ''))
-            knowledgeBase = set([CLAUSE(lines[i + 2].replace('\n', '')) for i in range(numOfClauses)])
+            knowledgeBase = set([CLAUSE(lines[i + 2].replace('\n', ''))
+                                for i in range(numOfClauses)])
             return knowledgeBase, alpha
     except:
         return None
@@ -159,9 +168,32 @@ def WRITE_OUTPUT(outputs: list, outputFilePath: str):
 
 
 def main():
-    inputs = READ_INPUT('./INPUT/input0.txt')
-    result = PL_RESOLUTION(inputs[0], inputs[1], debug_mode=True)
-    print(result)
-    WRITE_OUTPUT(result, './OUTPUT/output0.txt')
+    try:
+        inputPaths = [join('INPUT', file) for file in listdir('INPUT') if isfile(join('INPUT', file))]
+        for inputPath in inputPaths:
+            print('========================================================================')
+            print('\nInput file: ' + inputPath)
+            inputs = READ_INPUT(inputPath)
+            if inputs == None:
+                raise Exception('Invalid input file: ' + inputPath)
+            KB = inputs[0]; alpha = inputs[1]
+            print('Knowledge base: ' + str(KB))
+            print('Alpha: ' + str(alpha))
+            output = PL_RESOLUTION(KB, alpha, debug_mode=True)
+            print('Output: ' + str(output))
+            outputFilePath = inputPath.replace('INPUT', 'OUTPUT').replace('input', 'output')
+            WRITE_OUTPUT(output, outputFilePath)
+    except Exception as error:
+        print(str(error))
 
-main()
+
+# test
+inputPath = 'test-input.txt'
+inputs = READ_INPUT(inputPath)
+KB = inputs[0]; alpha = inputs[1]
+print('Knowledge base: ' + str(KB))
+print('Alpha: ' + str(alpha))
+output = PL_RESOLUTION(KB, alpha, debug_mode=True)
+print('Output: ' + str(output))
+outputFilePath = inputPath.replace('INPUT', 'OUTPUT').replace('input', 'output')
+WRITE_OUTPUT(output, outputFilePath)
