@@ -186,14 +186,4 @@ def main():
     except Exception as error:
         print(str(error))
 
-
-# test
-inputPath = 'test-input.txt'
-inputs = READ_INPUT(inputPath)
-KB = inputs[0]; alpha = inputs[1]
-print('Knowledge base: ' + str(KB))
-print('Alpha: ' + str(alpha))
-output = PL_RESOLUTION(KB, alpha, debug_mode=True)
-print('Output: ' + str(output))
-outputFilePath = inputPath.replace('INPUT', 'OUTPUT').replace('input', 'output')
-WRITE_OUTPUT(output, outputFilePath)
+main()
