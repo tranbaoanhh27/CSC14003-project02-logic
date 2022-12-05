@@ -1,7 +1,7 @@
 from copy import deepcopy
-from os import listdir
-from os.path import isfile, join
-from typing import List, Set
+from os import listdir, makedirs
+from os.path import isfile, join, isdir
+from typing import List
 
 
 def SORT_LITERALS(literalList: List[str]):
@@ -25,7 +25,8 @@ def NEGATIVE(literal: str):
 
 
 def RESOLVABLE(a: List[str], b: List[str]) -> bool:
-    ''' Chỉ resolve khi hai mệnh đề có duy nhất một cặp literal đối nhau '''
+    ''' Chỉ resolve khi hai mệnh đề có duy nhất
+    một cặp literal đối nhau '''
     countOppositePair = 0
     for literal in a:
         if NEGATIVE(literal) in b:
@@ -76,7 +77,7 @@ def REMOVE_DUPLICATES(sequence: list):
     return result
 
 
-def NOT(clause: list) -> List[list]:
+def NOT(clause: List[str]) -> List[List[str]]:
     result = []
     for literal in clause:
         result.append([NEGATIVE(literal)])
@@ -98,54 +99,39 @@ def IS_SUBSET(a: List[List[str]], b: List[List[str]]):
 
 
 def PL_RESOLUTION(KB: List[List[str]], alpha: List[str]):
-
     outputs = []
-
     clauses = deepcopy(KB)
     clauses = clauses + [x for x in NOT(alpha) if x not in clauses]
-
-    # print('\ninitial clauses =', clauses)
-
     new = []
 
     loop = 0
     start = 0
     while (True):
         loop = loop + 1
-        print('\nloop #', loop)
-        print('current clauses: ' + str(clauses))
-        print('start: ' + str(start))
+        print('\nloop #' + str(loop))
+
         for i in range(len(clauses)):
             for j in range(start, len(clauses)):
                 if i <= j:
                     resolvents = PL_RESOLVE(clauses[i], clauses[j])
-                    # print('resolve (' + str(clauses[i]) + ') and (' + str(clauses[j]) + ') = ' + str(resolvents))
-                    new = new + [sorted(x)
-                                 for x in resolvents if sorted(x) not in new]
-
-        newClauses = [sorted(clause)
-                      for clause in new if sorted(clause) not in clauses]
+                    # if len(resolvents) > 0:
+                    #     print('Resolve (' + TO_STRING(clauses[i]) + ') and (' + TO_STRING(clauses[j]) + ') = (' + TO_STRING(resolvents[0]) + ')')
+                    new = new + [sorted(x) for x in resolvents if sorted(x) not in new]
+        newClauses = [sorted(clause) for clause in new if sorted(clause) not in clauses]
         outputs.append(len(newClauses))
         outputs = outputs + [TO_STRING(clause) for clause in newClauses]
         start = len(clauses)
-
-        # print('loop #', loop)
-        print(str(len(newClauses)) + ' new clauses: ' + str(newClauses))
+        print(str(len(newClauses)) + ' new clauses.')
 
         if CONTAINS_EMPTY_CLAUSE(new):
-            # print('new contains empty clause: ', new)
             outputs.append('YES')
             return outputs
 
         if IS_SUBSET(new, clauses):
-            # print('new is subset of clauses')
-            # print('new =', new)
-            # print('clauses =', clauses)
             outputs.append('NO')
             return outputs
 
-        clauses = clauses + [sorted(x)
-                             for x in new if sorted(x) not in clauses]
+        clauses = clauses + [sorted(x) for x in new if sorted(x) not in clauses]
 
 
 def CLAUSE(raw: str) -> List[str]:
@@ -172,36 +158,27 @@ def WRITE_OUTPUT(outputs: list, outputFilePath: str):
 
 def main():
     try:
-        inputPaths = [join('INPUT', file) for file in listdir(
-            'INPUT') if isfile(join('INPUT', file))]
+        if not isdir('OUTPUT'):
+            makedirs('OUTPUT')
+
+        inputPaths = [join('INPUT', file) for file in listdir('INPUT') if isfile(join('INPUT', file))]
+
         for inputPath in inputPaths:
-            print(
-                '========================================================================')
+            print('\n========================================================================')
             print('\nInput file: ' + inputPath)
             inputs = READ_INPUT(inputPath)
             if inputs == None:
                 raise Exception('Invalid input file: ' + inputPath)
             KB = inputs[0]
             alpha = inputs[1]
-            print('Knowledge base: ' + str(KB))
-            print('Alpha: ' + str(alpha))
-            output = PL_RESOLUTION(KB, alpha, debug_mode=True)
-            print('Output: ' + str(output))
-            outputFilePath = inputPath.replace(
-                'INPUT', 'OUTPUT').replace('input', 'output')
+            print('Knowledge base: ' + str([TO_STRING(x) for x in KB]))
+            print('Alpha: ' + TO_STRING(alpha))
+            output = PL_RESOLUTION(KB, alpha)
+            print('\nOutput: ' + str(output))
+            outputFilePath = inputPath.replace('INPUT', 'OUTPUT').replace('input', 'output')
             WRITE_OUTPUT(output, outputFilePath)
+    
     except Exception as error:
         print(str(error))
 
-
-# # test
-inputPath = 'INPUT/input0.txt'
-inputs = READ_INPUT(inputPath)
-KB = inputs[0]
-alpha = inputs[1]
-print('Knowledge base: ' + str(KB))
-print('Alpha: ' + str(alpha))
-output = PL_RESOLUTION(KB, alpha)
-print('Output: ' + str(output))
-outputFilePath = inputPath.replace('INPUT', 'OUTPUT').replace('input', 'output')
-WRITE_OUTPUT(output, outputFilePath)
+main()
